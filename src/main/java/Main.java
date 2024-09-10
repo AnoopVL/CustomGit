@@ -6,7 +6,7 @@ public class Main {
   public static void main(String[] args){
     
     final String command = args[0];
-    
+    // demo commit 
     switch (command) {
       case "init" -> {
         final File root = new File(".git");
