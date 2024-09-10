@@ -34,7 +34,7 @@ public class Main {
         String hash = args[2];
         String dir = hash.substring(0,2);
         hash = hash.substring(2);
-        
+
         File file = new File("./.git/objects/" + dir + "/" + hash);
         try {
           String blobObj = new BufferedReader(new InputStreamReader(new InflaterInputStream(new FileInputStream(file)))).readLine();
@@ -45,7 +45,7 @@ public class Main {
         }catch(IOException e){
           throw new RuntimeException(e);
         }
-      }
+    }
       default -> System.out.println("Unknown command: " + command);
     }
   }
