@@ -1,4 +1,5 @@
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -8,6 +9,9 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.InflaterInputStream;
 
@@ -94,6 +98,14 @@ public class Main {
       }
     }
 
+    case "ls-tree" -> {
+      if (!"--name-only".equals(args[1])) {
+          System.out.println("Incorrect arguments for ls-tree");
+          return;
+      }
+      lsTree(args[2]);
+  }
+
 
       default -> System.out.println("Unknown command: " + command);
     }
@@ -115,5 +127,58 @@ public class Main {
     }
     return sb.toString();
   }
+
+  private static void lsTree(String treeHash) {
+        String dir = treeHash.substring(0, 2);
+        String hash = treeHash.substring(2);
+        File file = new File(".git/objects/" + dir + "/" + hash);
+
+        try (InflaterInputStream inflaterInputStream = new InflaterInputStream(new FileInputStream(file))) {
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            byte[] buffer = new byte[1024];
+            int len;
+            while ((len = inflaterInputStream.read(buffer)) != -1) {
+                byteArrayOutputStream.write(buffer, 0, len);
+            }
+
+            byte[] treeObject = byteArrayOutputStream.toByteArray();
+            int index = 0;
+
+            // Skip the header (tree <size>\0)
+            while (treeObject[index] != 0) {
+                index++;
+            }
+            index++; // Skip the null byte
+
+            List<String> entries = new ArrayList<>();
+
+            // Parse each entry
+            while (index < treeObject.length) {
+                // Extract mode (file type)
+                int modeEnd = index;
+                while (treeObject[modeEnd] != ' ') modeEnd++;
+                String mode = new String(treeObject, index, modeEnd - index);
+                index = modeEnd + 1;
+
+                // Extract name (file/directory name)
+                int nameEnd = index;
+                while (treeObject[nameEnd] != 0) nameEnd++;
+                String name = new String(treeObject, index, nameEnd - index);
+                entries.add(name); // Add name to the list
+                index = nameEnd + 21; // Skip the null byte and 20-byte SHA hash
+
+                // Continue to the next entry
+            }
+
+            // Print the entries in alphabetical order
+            Collections.sort(entries);
+            for (String entry : entries) {
+                System.out.println(entry);
+            }
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
 }
