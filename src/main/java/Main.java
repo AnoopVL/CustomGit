@@ -204,9 +204,9 @@ private static void catFile(String hash) {
 
     // Write the tree object for the current directory
     private static String writeTree(Path directory) throws IOException, NoSuchAlgorithmException {
-    List<TreeEntry> entries = new ArrayList<>();
+      List<TreeEntry> entries = new ArrayList<>();
 
-    try (DirectoryStream<Path> stream = Files.newDirectoryStream(directory)) {
+      try (DirectoryStream<Path> stream = Files.newDirectoryStream(directory)) {
         for (Path entry : stream) {     
             if (entry.getFileName().toString().equals(".git")) {
                 continue;  // Ignore the .git directory
@@ -220,24 +220,24 @@ private static void catFile(String hash) {
                 entries.add(new TreeEntry("100644", entry.getFileName().toString(), blobHash));
             }
         }
-    }
+      } 
 
-    // Sort the entries by filename
-    Collections.sort(entries);
+      // Sort the entries by filename
+      Collections.sort(entries);
 
-    // Concatenate the entries into a single byte array
-    ByteArrayOutputStream treeContent = new ByteArrayOutputStream();
-    for (TreeEntry entry : entries) {
+      // Concatenate the entries into a single byte array
+      ByteArrayOutputStream treeContent = new ByteArrayOutputStream();
+      for (TreeEntry entry : entries) {
         treeContent.write(entry.getBytes());
-    }
-    byte[] treeData = treeContent.toByteArray();
+      }
+      byte[] treeData = treeContent.toByteArray();
 
-    // Add the tree header
-    String header = "tree " + treeData.length + "\0";
-    byte[] treeObject = concatenate(header.getBytes(), treeData);
+      // Add the tree header
+      String header = "tree " + treeData.length + "\0";
+      byte[] treeObject = concatenate(header.getBytes(), treeData);
 
-    // Write the tree object and return its SHA-1 hash
-    return writeObjectToGit(treeObject);
+      // Write the tree object and return its SHA-1 hash
+      return writeObjectToGit(treeObject);
     }
 
     // Helper class to represent a tree entry
