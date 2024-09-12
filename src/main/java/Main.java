@@ -213,15 +213,16 @@ private static void catFile(String hash) {
           }
 
           if (Files.isDirectory(entry)) {
-              String treeHash = writeTree(entry);  // Recursively create tree for subdirectories
-              byte[] entryBytes = createTreeEntry(treeHash, entry.getFileName().toString(), "40000");  // Mode for directories
-                    entries.add(entryBytes);
+            String treeHash = writeTree(entry);  // Recursively create tree for subdirectories
+            byte[] entryBytes = createTreeEntry(treeHash, entry.getFileName().toString(), "40000");  // Mode for directories
+            entries.add(entryBytes);
           } else {
-              String blobHash = createBlob(entry);  // Create a blob object for the file
-              byte[] entryBytes = createTreeEntry(blobHash, entry.getFileName().toString(), "100644");  // Mode for regular files
-                    entries.add(entryBytes);
-                }
+            String blobHash = createBlob(entry);  // Create a blob object for the file
+            byte[] entryBytes = createTreeEntry(blobHash, entry.getFileName().toString(), "100644");  // Mode for regular files
+            entries.add(entryBytes);
             }
+        
+          }
         }
 
         // Sort the entries by filename
@@ -240,21 +241,22 @@ private static void catFile(String hash) {
       
           // Create a tree entry in the format <mode> <name>\0<20-byte SHA>
           private static byte[] createTreeEntry(String shaHex, String name, String mode) throws NoSuchAlgorithmException {
-              ByteArrayOutputStream entryStream = new ByteArrayOutputStream();
-      
-              try {
-                  // Write the mode and name
-                  entryStream.write((mode + " " + name).getBytes());
-                  entryStream.write(0);  // Null byte
-      
-                  // Convert SHA-1 hex to binary and write it
-                  entryStream.write(hexToBytes(shaHex));
-              } catch (IOException e) {
-                  throw new RuntimeException(e);
-              }
-      
-              return entryStream.toByteArray();
-          }
+            ByteArrayOutputStream entryStream = new ByteArrayOutputStream();
+        
+            try {
+                // Write the mode and name
+                entryStream.write((mode + " " + name).getBytes());
+                entryStream.write(0);  // Null byte
+        
+                // Convert SHA-1 hex to binary and write it
+                entryStream.write(hexToBytes(shaHex));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        
+            return entryStream.toByteArray();
+        }
+        
       
           // Create a blob object for the given file and return its SHA-1 hash
           private static String createBlob(Path file) throws IOException, NoSuchAlgorithmException {
