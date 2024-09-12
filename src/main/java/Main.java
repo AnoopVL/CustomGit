@@ -204,40 +204,66 @@ private static void catFile(String hash) {
 
     // Write the tree object for the current directory
     private static String writeTree(Path directory) throws IOException, NoSuchAlgorithmException {
-      List<byte[]> entries = new ArrayList<>();
+    List<TreeEntry> entries = new ArrayList<>();
 
-      try (DirectoryStream<Path> stream = Files.newDirectoryStream(directory)) {
+    try (DirectoryStream<Path> stream = Files.newDirectoryStream(directory)) {
         for (Path entry : stream) {     
-          if (entry.getFileName().toString().equals(".git")) {
-              continue;  // Ignore the .git directory
-          }
-
-          if (Files.isDirectory(entry)) {
-            String treeHash = writeTree(entry);  // Recursively create tree for subdirectories
-            byte[] entryBytes = createTreeEntry(treeHash, entry.getFileName().toString(), "40000");  // Mode for directories
-            entries.add(entryBytes);
-          } else {
-            String blobHash = createBlob(entry);  // Create a blob object for the file
-            byte[] entryBytes = createTreeEntry(blobHash, entry.getFileName().toString(), "100644");  // Mode for regular files
-            entries.add(entryBytes);
+            if (entry.getFileName().toString().equals(".git")) {
+                continue;  // Ignore the .git directory
             }
-        
-          }
+
+            if (Files.isDirectory(entry)) {
+                String treeHash = writeTree(entry);  // Recursively create tree for subdirectories
+                entries.add(new TreeEntry("40000", entry.getFileName().toString(), treeHash));
+            } else {
+                String blobHash = createBlob(entry);  // Create a blob object for the file
+                entries.add(new TreeEntry("100644", entry.getFileName().toString(), blobHash));
+            }
         }
-
-        // Sort the entries by filename
-        entries.sort(Comparator.comparing(Main::getEntryFileName));
-
-        // Concatenate the entries into a single byte array
-        byte[] treeData = concatenateEntries(entries);
-      
-        // Add the tree header
-        String header = "tree " + treeData.length + "\0";
-        byte[] treeObject = concatenate(header.getBytes(), treeData);
-      
-        // Write the tree object and return its SHA-1 hash
-        return writeObjectToGit(treeObject);
     }
+
+    // Sort the entries by filename
+    Collections.sort(entries);
+
+    // Concatenate the entries into a single byte array
+    ByteArrayOutputStream treeContent = new ByteArrayOutputStream();
+    for (TreeEntry entry : entries) {
+        treeContent.write(entry.getBytes());
+    }
+    byte[] treeData = treeContent.toByteArray();
+
+    // Add the tree header
+    String header = "tree " + treeData.length + "\0";
+    byte[] treeObject = concatenate(header.getBytes(), treeData);
+
+    // Write the tree object and return its SHA-1 hash
+    return writeObjectToGit(treeObject);
+    }
+
+    // Helper class to represent a tree entry
+private static class TreeEntry implements Comparable<TreeEntry> {
+  String mode;
+  String name;
+  String hash;
+
+  TreeEntry(String mode, String name, String hash) {
+      this.mode = mode;
+      this.name = name;
+      this.hash = hash;
+  }
+
+  byte[] getBytes() throws IOException {
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      out.write((mode + " " + name + "\0").getBytes());
+      out.write(hexToBytes(hash));
+      return out.toByteArray();
+  }
+
+  @Override
+  public int compareTo(TreeEntry other) {
+      return this.name.compareTo(other.name);
+  }
+}
       
           // Create a tree entry in the format <mode> <name>\0<20-byte SHA>
           private static byte[] createTreeEntry(String shaHex, String name, String mode) throws NoSuchAlgorithmException {
