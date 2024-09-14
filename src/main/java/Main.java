@@ -283,24 +283,6 @@ private static class TreeEntry implements Comparable<TreeEntry> {
       return this.name.compareTo(other.name);
   }
 }
-      
-          // Create a tree entry in the format <mode> <name>\0<20-byte SHA>
-    // private static byte[] createTreeEntry(String shaHex, String name, String mode) throws NoSuchAlgorithmException {
-    //     ByteArrayOutputStream entryStream = new ByteArrayOutputStream();
-    
-    //     try {
-    //         // Write the mode and name
-    //         entryStream.write((mode + " " + name).getBytes());
-    //         entryStream.write(0);  // Null byte
-    
-    //         // Convert SHA-1 hex to binary and write it
-    //         entryStream.write(hexToBytes(shaHex));
-    //     } catch (IOException e) {
-    //         throw new RuntimeException(e);
-    //     }
-    
-    //     return entryStream.toByteArray();
-    // }
         
       
     // Create a blob object for the given file and return its SHA-1 hash
@@ -348,8 +330,8 @@ private static class TreeEntry implements Comparable<TreeEntry> {
 
         // Write author and committer (using hardcoded values)
         String timestamp = getFormattedTimestamp();
-        String authorLine = "author John Doe <john@example.com> " + timestamp + "\n";
-        String committerLine = "committer John Doe <john@example.com> " + timestamp + "\n";
+        String authorLine = "author Anoop Lanjekar <avlanjekar4@gmail.com.com> " + timestamp + "\n";
+        String committerLine = "committer Anoop Lanjekar <avlanjekar4@gmail.com> " + timestamp + "\n";
         commitContent.write(authorLine.getBytes(StandardCharsets.UTF_8));
         commitContent.write(committerLine.getBytes(StandardCharsets.UTF_8));
 
@@ -380,19 +362,6 @@ private static class TreeEntry implements Comparable<TreeEntry> {
         return timestamp + " " + offsetStr;
     }
       
-    // // Helper to concatenate multiple byte arrays
-    // private static byte[] concatenate(byte[]... arrays) {
-    //     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    //     for (byte[] array : arrays) {
-    //         try {
-    //             outputStream.write(array);
-    //         } catch (IOException e) {
-    //             throw new RuntimeException(e);
-    //         }
-    //     }
-    //     return outputStream.toByteArray();
-    // }
-
     // Convert SHA-1 hex string to binary
     private static byte[] hexToBytes(String shaHex) {
         int len = shaHex.length();
@@ -404,26 +373,5 @@ private static class TreeEntry implements Comparable<TreeEntry> {
         return data;
     }
     
-    //       // Helper to sort tree entries by file name
-    // private static String getEntryFileName(byte[] entry) {
-    //     int endIndex = 0;
-    //     while (entry[endIndex] != 0) {
-    //         endIndex++;
-    //     }
-    //     return new String(entry, 0, endIndex);
-    // }
-      
-    // // Concatenate all tree entries into a single byte array
-    // private static byte[] concatenateEntries(List<byte[]> entries) {
-    //     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    //     for (byte[] entry : entries) {
-    //         try {
-    //             outputStream.write(entry);
-    //         } catch (IOException e) {
-    //             throw new RuntimeException(e);
-    //         }
-    //     }
-    //     return outputStream.toByteArray();
-    // }
 
 }
