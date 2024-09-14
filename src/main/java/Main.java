@@ -1,10 +1,18 @@
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -19,6 +27,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.InflaterInputStream;
 
@@ -73,6 +83,23 @@ public class Main {
             System.out.println(commitHash);
         } catch (IOException | NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    case "clone" ->{
+        if (args.length < 3 || !args[0].equals("clone")) {
+            System.out.println("Usage: java Main clone <repo_url> <target_directory>");
+            return;
+        }
+
+        String repoUrl = args[1];
+        String targetDirectory = args[2];
+
+        try {
+            cloneRepository(repoUrl, targetDirectory);
+        } catch (Exception e) {
+            System.err.println("Error cloning repository: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -350,8 +377,6 @@ private static class TreeEntry implements Comparable<TreeEntry> {
         return writeObjectToGit(commitObject);
     }
 
-
-
     private static String getFormattedTimestamp() {
         Instant now = Instant.now();
         String timestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
@@ -361,7 +386,172 @@ private static class TreeEntry implements Comparable<TreeEntry> {
         String offsetStr = String.format("%+05d", offset / 60 * 100 + offset % 60);
         return timestamp + " " + offsetStr;
     }
-      
+
+    // Clone the repo
+    private static void cloneRepository(String repoUrl, String targetDirectory) throws IOException {
+        Path targetDir = Paths.get(targetDirectory);
+        Files.createDirectories(targetDir.resolve(".git/objects"));
+        Files.createDirectories(targetDir.resolve(".git/refs/heads"));
+        Files.write(targetDir.resolve(".git/HEAD"), "ref: refs/heads/master".getBytes());
+
+        String commitHash = getLatestCommitHash(repoUrl);
+        System.out.println("Latest commit hash: " + commitHash);
+
+        fetchObjects(repoUrl, targetDirectory, commitHash);
+
+        System.out.println("Repository cloned to: " + targetDir.toAbsolutePath());
+    }
+
+    private static String getLatestCommitHash(String repoUrl) throws IOException {
+        URL url = new URL(repoUrl + "/info/refs?service=git-upload-pack");
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+            String line;
+            Pattern pattern = Pattern.compile("([a-f0-9]{40}) refs/heads/(master|main)");
+            while ((line = reader.readLine()) != null) {
+                Matcher matcher = pattern.matcher(line);
+                if (matcher.find()) {
+                    return matcher.group(1);
+                }
+            }
+        }
+        throw new IOException("Could not find the latest commit hash for the master or main branch");
+    }
+
+    private static void fetchObjects(String repoUrl, String targetDirectory, String commitHash) throws IOException {
+        URL url = new URL(repoUrl + "/git-upload-pack");
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setDoOutput(true);
+        conn.setRequestProperty("Content-Type", "application/x-git-upload-pack-request");
+
+        try (OutputStream out = conn.getOutputStream()) {
+            String request = String.format("0032want %s\n00000009done\n", commitHash);
+            out.write(request.getBytes());
+        }
+
+        try (InputStream in = conn.getInputStream();
+             FileOutputStream fos = new FileOutputStream(targetDirectory + "/.git/objects/pack")) {
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = in.read(buffer)) != -1) {
+                fos.write(buffer, 0, bytesRead);
+            }
+        }
+
+        // TODO: Implement pack file parsing and object extraction
+        System.out.println("Pack file downloaded. Parsing and object extraction not yet implemented.");
+    }
+
+    private static void initBareRepository(String targetDir) throws IOException {
+        Files.createDirectories(Paths.get(targetDir, ".git", "objects"));
+        Files.createDirectories(Paths.get(targetDir, ".git", "refs"));
+        Files.write(Paths.get(targetDir, ".git", "HEAD"), "ref: refs/heads/main".getBytes());
+    }
+
+    @SuppressWarnings("deprecation")
+    private static String sendSmartHttpRequest(String url) throws IOException {
+        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+        conn.setRequestProperty("Git-Protocol", "version=2");
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+            StringBuilder response = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                response.append(line).append("\n");
+            }
+            return response.toString();
+        }
+    }
+
+    private static byte[] requestPackfile(String repoUrl, String wantRef) throws IOException {
+        @SuppressWarnings("deprecation")
+        URL url = new URL(repoUrl + "/git-upload-pack");
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setDoOutput(true);
+
+        String request = "0032want " + wantRef + "\n00000009done\n";
+        try (OutputStream os = conn.getOutputStream()) {
+            os.write(request.getBytes());
+        }
+
+        try (InputStream is = conn.getInputStream()) {
+            return is.readAllBytes();
+        }
+    }
+
+    private static void processPackfile(byte[] packfile, String targetDir) throws IOException, NoSuchAlgorithmException {
+        try (InputStream is = new ByteArrayInputStream(packfile)) {
+            // Skip the header
+            is.skip(8);
+
+            int objectCount = readInt32(is);
+            for (int i = 0; i < objectCount; i++) {
+                int objectType = (is.read() >> 4) & 7;
+                long size = readVariableLengthInteger(is);
+
+                byte[] objectData = new byte[(int) size];
+                is.read(objectData);
+
+                switch (objectType) {
+                    case 1: // Commit
+                    case 2: // Tree
+                    case 3: // Blob
+                        writeObject(targetDir, objectType, objectData);
+                        break;
+                    // Handle other object types if needed
+                }
+            }
+        }
+    }
+
+    private static int readInt32(InputStream is) throws IOException {
+        byte[] buf = new byte[4];
+        is.read(buf);
+        return ((buf[0] & 0xFF) << 24) | ((buf[1] & 0xFF) << 16) | ((buf[2] & 0xFF) << 8) | (buf[3] & 0xFF);
+    }
+
+    private static long readVariableLengthInteger(InputStream is) throws IOException {
+        long value = 0;
+        int shift = 0;
+        int b;
+        do {
+            b = is.read();
+            value |= (long) (b & 0x7F) << shift;
+            shift += 7;
+        } while ((b & 0x80) != 0);
+        return value;
+    }
+
+    private static void writeObject(String targetDir, int objectType, byte[] data) throws IOException, NoSuchAlgorithmException {
+        String type = switch (objectType) {
+            case 1 -> "commit";
+            case 2 -> "tree";
+            case 3 -> "blob";
+            default -> throw new IllegalArgumentException("Unknown object type: " + objectType);
+        };
+
+        byte[] header = (type + " " + data.length + "\0").getBytes();
+        byte[] fullObject = new byte[header.length + data.length];
+        System.arraycopy(header, 0, fullObject, 0, header.length);
+        System.arraycopy(data, 0, fullObject, header.length, data.length);
+
+        MessageDigest md = MessageDigest.getInstance("SHA-1");
+        byte[] sha1 = md.digest(fullObject);
+        String hash = bytesToHex(sha1);
+
+        String objectDir = targetDir + "/.git/objects/" + hash.substring(0, 2);
+        Files.createDirectories(Paths.get(objectDir));
+        String objectPath = objectDir + "/" + hash.substring(2);
+
+        try (OutputStream os = new DeflaterOutputStream(new FileOutputStream(objectPath))) {
+            os.write(fullObject);
+        }
+    }
+
     // Convert SHA-1 hex string to binary
     private static byte[] hexToBytes(String shaHex) {
         int len = shaHex.length();
