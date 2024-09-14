@@ -240,7 +240,7 @@ private static void catFile(String hash) {
       return writeObjectToGit(treeObject);
     }
 
-    // Helper class to represent a tree entry
+  // Helper class to represent a tree entry
 private static class TreeEntry implements Comparable<TreeEntry> {
   String mode;
   String name;
@@ -266,100 +266,100 @@ private static class TreeEntry implements Comparable<TreeEntry> {
 }
       
           // Create a tree entry in the format <mode> <name>\0<20-byte SHA>
-          private static byte[] createTreeEntry(String shaHex, String name, String mode) throws NoSuchAlgorithmException {
-            ByteArrayOutputStream entryStream = new ByteArrayOutputStream();
+    private static byte[] createTreeEntry(String shaHex, String name, String mode) throws NoSuchAlgorithmException {
+        ByteArrayOutputStream entryStream = new ByteArrayOutputStream();
+    
+        try {
+            // Write the mode and name
+            entryStream.write((mode + " " + name).getBytes());
+            entryStream.write(0);  // Null byte
+    
+            // Convert SHA-1 hex to binary and write it
+            entryStream.write(hexToBytes(shaHex));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    
+        return entryStream.toByteArray();
+    }
         
+      
+    // Create a blob object for the given file and return its SHA-1 hash
+    private static String createBlob(Path file) throws IOException, NoSuchAlgorithmException {
+        byte[] fileContent = Files.readAllBytes(file);
+        String header = "blob " + fileContent.length + "\0";
+        byte[] blob = concatenate(header.getBytes(), fileContent);
+        return writeObjectToGit(blob);  // Write the blob object and return its hash
+    }
+      
+    // Write a git object (blob/tree) to the .git/objects directory and return its SHA-1 hash
+    private static String writeObjectToGit(byte[] object) throws NoSuchAlgorithmException, IOException {
+        // Compute the SHA-1 hash of the object
+        MessageDigest md = MessageDigest.getInstance("SHA-1");
+        byte[] sha1Hash = md.digest(object);
+        String sha1Hex = bytesToHex(sha1Hash);
+
+        // Write the object to the .git/objects directory
+        String dir = sha1Hex.substring(0, 2);
+        String fileName = sha1Hex.substring(2);
+        File objectDir = new File(".git/objects/" + dir);
+        if (!objectDir.exists()) {
+            objectDir.mkdirs();
+        }
+        File objectFile = new File(objectDir, fileName);
+
+        try (FileOutputStream fos = new FileOutputStream(objectFile);
+             DeflaterOutputStream dos = new DeflaterOutputStream(fos)) {
+            dos.write(object);
+        }
+
+        return sha1Hex;
+    }
+      
+    // Helper to concatenate multiple byte arrays
+    private static byte[] concatenate(byte[]... arrays) {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        for (byte[] array : arrays) {
             try {
-                // Write the mode and name
-                entryStream.write((mode + " " + name).getBytes());
-                entryStream.write(0);  // Null byte
-        
-                // Convert SHA-1 hex to binary and write it
-                entryStream.write(hexToBytes(shaHex));
+                outputStream.write(array);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-        
-            return entryStream.toByteArray();
         }
-        
-      
-          // Create a blob object for the given file and return its SHA-1 hash
-          private static String createBlob(Path file) throws IOException, NoSuchAlgorithmException {
-              byte[] fileContent = Files.readAllBytes(file);
-              String header = "blob " + fileContent.length + "\0";
-              byte[] blob = concatenate(header.getBytes(), fileContent);
-              return writeObjectToGit(blob);  // Write the blob object and return its hash
-          }
-      
-          // Write a git object (blob/tree) to the .git/objects directory and return its SHA-1 hash
-          private static String writeObjectToGit(byte[] object) throws NoSuchAlgorithmException, IOException {
-              // Compute the SHA-1 hash of the object
-              MessageDigest md = MessageDigest.getInstance("SHA-1");
-              byte[] sha1Hash = md.digest(object);
-              String sha1Hex = bytesToHex(sha1Hash);
-      
-              // Write the object to the .git/objects directory
-              String dir = sha1Hex.substring(0, 2);
-              String fileName = sha1Hex.substring(2);
-              File objectDir = new File(".git/objects/" + dir);
-              if (!objectDir.exists()) {
-                  objectDir.mkdirs();
-              }
-              File objectFile = new File(objectDir, fileName);
-      
-              try (FileOutputStream fos = new FileOutputStream(objectFile);
-                   DeflaterOutputStream dos = new DeflaterOutputStream(fos)) {
-                  dos.write(object);
-              }
-      
-              return sha1Hex;
-          }
-      
-          // Helper to concatenate multiple byte arrays
-          private static byte[] concatenate(byte[]... arrays) {
-              ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-              for (byte[] array : arrays) {
-                  try {
-                      outputStream.write(array);
-                  } catch (IOException e) {
-                      throw new RuntimeException(e);
-                  }
-              }
-              return outputStream.toByteArray();
-          }
-      
-          // Convert SHA-1 hex string to binary
-          private static byte[] hexToBytes(String shaHex) {
-              int len = shaHex.length();
-              byte[] data = new byte[len / 2];
-              for (int i = 0; i < len; i += 2) {
-                  data[i / 2] = (byte) ((Character.digit(shaHex.charAt(i), 16) << 4)
-                          + Character.digit(shaHex.charAt(i + 1), 16));
-              }
-              return data;
-          }
+        return outputStream.toByteArray();
+    }
+
+    // Convert SHA-1 hex string to binary
+    private static byte[] hexToBytes(String shaHex) {
+        int len = shaHex.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(shaHex.charAt(i), 16) << 4)
+                    + Character.digit(shaHex.charAt(i + 1), 16));
+        }
+        return data;
+    }
     
           // Helper to sort tree entries by file name
-          private static String getEntryFileName(byte[] entry) {
-              int endIndex = 0;
-              while (entry[endIndex] != 0) {
-                  endIndex++;
-              }
-              return new String(entry, 0, endIndex);
-          }
+    private static String getEntryFileName(byte[] entry) {
+        int endIndex = 0;
+        while (entry[endIndex] != 0) {
+            endIndex++;
+        }
+        return new String(entry, 0, endIndex);
+    }
       
-          // Concatenate all tree entries into a single byte array
-          private static byte[] concatenateEntries(List<byte[]> entries) {
-              ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-              for (byte[] entry : entries) {
-                  try {
-                      outputStream.write(entry);
-                  } catch (IOException e) {
-                      throw new RuntimeException(e);
-                  }
-              }
-              return outputStream.toByteArray();
-          }
+    // Concatenate all tree entries into a single byte array
+    private static byte[] concatenateEntries(List<byte[]> entries) {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        for (byte[] entry : entries) {
+            try {
+                outputStream.write(entry);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return outputStream.toByteArray();
+    }
 
 }
