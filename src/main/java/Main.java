@@ -61,12 +61,15 @@ public class Main {
     }
 
     case "commit-tree" -> {
-        if (args.length != 6 || !"-p".equals(args[2]) || !"-m".equals(args[4])) {
-            System.out.println("Incorrect arguments for commit-tree");
+        if (args.length < 4 || !args[2].equals("-m")) {
+            System.out.println("Usage: commit-tree <tree-sha> -m <message> [-p <parent-commit>]");
             return;
         }
+        String treeSha = args[1];
+        String message = args[3];
+        String parentSha = args.length > 5 && args[4].equals("-p") ? args[5] : null;
         try {
-            String commitHash = commitTree(args[1], args[3], args[5]);
+            String commitHash = commitTree(treeSha, parentSha, message);
             System.out.println(commitHash);
         } catch (IOException | NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
@@ -338,8 +341,10 @@ private static class TreeEntry implements Comparable<TreeEntry> {
         // Write tree
         commitContent.write(("tree " + treeSha + "\n").getBytes(StandardCharsets.UTF_8));
 
-        // Write parent
-        commitContent.write(("parent " + parentSha + "\n").getBytes(StandardCharsets.UTF_8));
+        // Write parent if provided
+        if (parentSha != null) {
+            commitContent.write(("parent " + parentSha + "\n").getBytes(StandardCharsets.UTF_8));
+        }
 
         // Write author and committer (using hardcoded values)
         String timestamp = getFormattedTimestamp();
@@ -362,6 +367,8 @@ private static class TreeEntry implements Comparable<TreeEntry> {
         // Write the commit object and return its SHA-1 hash
         return writeObjectToGit(commitObject);
     }
+
+
 
     private static String getFormattedTimestamp() {
         Instant now = Instant.now();
