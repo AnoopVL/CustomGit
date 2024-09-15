@@ -1,60 +1,106 @@
-[![progress-banner](https://backend.codecrafters.io/progress/git/dad79174-8aca-4576-b317-a7120e6c1051)](https://app.codecrafters.io/users/codecrafters-bot?r=2qF)
+# Custom Git Implementation in Java
 
-This is a starting point for Java solutions to the
-["Build Your Own Git" Challenge](https://codecrafters.io/challenges/git).
+This is a custom Git implementation from scratch, using Java, that can handle basic Git operations such as initializing a repository, creating commits, and cloning a public repository. This project gives a deep dive into how Git operates at its core, showcasing how fundamental Git objects like blobs, commits, and trees are structured and how Git protocols work behind the scenes.
 
-In this challenge, you'll build a small Git implementation that's capable of
-initializing a repository, creating commits and cloning a public repository.
-Along the way we'll learn about the `.git` directory, Git objects (blobs,
-commits, trees etc.), Git's transfer protocols and more.
+This custom implementation has been crafted to help developers understand the inner workings of Git beyond its surface-level commands.
 
-**Note**: If you're viewing this repo on GitHub, head over to
-[codecrafters.io](https://codecrafters.io) to try the challenge.
+## Features
 
-# Passing the first stage
+1. **Repository Initialization (`git init`)**:  
+   This implementation allows you to initialize a new Git repository, setting up the essential `.git` folder with its associated structure.
+2. **Creating Commits (`git commit`)**:  
+   Commits are created by manually building Git objects such as trees and blobs. This project shows how each commit is structured and stored in the Git object database.
+3. **Cloning Repositories (`git clone`)**:  
+   A full clone operation is supported, where the project fetches commit histories and objects from a remote repository. This mimics the behavior of Git’s cloning feature, storing the fetched data in a custom `.git` folder.
 
-The entry point for your Git implementation is in `src/main/java/Main.java`.
-Study and uncomment the relevant code, and push your changes to pass the first
-stage:
+## How It Works
 
-```sh
-git commit -am "pass 1st stage" # any msg
-git push origin master
-```
+### **Git Internals**
 
-That's all!
+- **Blobs, Trees, and Commits**:  
+   Git’s data storage revolves around these objects. Blobs store file contents, trees store directory listings, and commits link snapshots of trees over time. In this implementation, I’ve recreated how Git handles these objects, showing how they are structured, hashed, and stored.
+- **Transfer Protocols**:  
+   Cloning is made possible through the transfer protocols that Git uses to fetch data from a remote repository. This project implements the mechanisms to fetch and store these objects, effectively recreating a mini Git client.
 
-# Stage 2 & beyond
+### **.git Directory**
 
-Note: This section is for stages 2 and beyond.
+- This implementation mimics the structure of the `.git` directory by manually setting up the directories and files that Git uses to track a repository’s state. This includes the `objects`, `refs`, and `HEAD` files, among others.
 
-1. Ensure you have `java (21)` installed locally
-1. Run `./your_program.sh` to run your Git implementation, which is implemented
-   in `src/main/java/Main.java`.
-1. Commit your changes and run `git push origin master` to submit your solution
-   to CodeCrafters. Test output will be streamed to your terminal.
+### **Command Line Integration**
 
-# Testing locally
+- The program can be run from the command line using the `your_program.sh` script, where various Git operations can be triggered, such as repository initialization and cloning.
 
-The `your_program.sh` script is expected to operate on the `.git` folder inside
-the current working directory. If you're running this inside the root of this
-repository, you might end up accidentally damaging your repository's `.git`
-folder.
+## Getting Started
 
-We suggest executing `your_program.sh` in a different folder when testing
-locally. For example:
+If you'd like to try out this Git implementation, here are the steps to get started:
 
-```sh
-mkdir -p /tmp/testing && cd /tmp/testing
-/path/to/your/repo/your_program.sh init
-```
+1. **Prerequisites**:
 
-To make this easier to type out, you could add a
-[shell alias](https://shapeshed.com/unix-alias/):
+   - Ensure you have Java 21 or higher installed on your system.
 
-```sh
-alias mygit=/path/to/your/repo/your_program.sh
+2. **Running the Program**:
 
-mkdir -p /tmp/testing && cd /tmp/testing
-mygit init
-```
+   - Clone this repository and navigate to the project directory.
+   - To initialize a new repository, run:
+
+     ```sh
+     ./your_program.sh init
+     ```
+
+   - To clone a public repository:
+     ```sh
+     ./your_program.sh clone <repository-url> <target-directory>
+     ```
+
+3. **Testing Locally**:
+   The program manipulates the `.git` folder in the current directory. To avoid interfering with existing repositories, I recommend testing in a temporary folder:
+
+   ```sh
+   mkdir -p /tmp/testing && cd /tmp/testing
+   /path/to/your/repo/your_program.sh init
+   ```
+
+   You can also create an alias to simplify this process:
+
+   ```sh
+   alias mygit=/path/to/your/repo/your_program.sh
+
+   mkdir -p /tmp/testing && cd /tmp/testing
+   mygit init
+   ```
+
+## Project Structure
+
+- src/main/java/Main.java:
+- - This is the main entry point for the custom Git implementation. It contains the logic to handle the Git operations such as init, commit, and clone.
+
+- your_program.sh:
+- - This script is used to run the custom Git commands from the command line, serving as an interface to the Java implementation.
+
+## Lessons Learned
+
+Building this Git implementation helped me gain a deeper understanding of Git’s internal workings:
+
+- Understanding of Git Objects:
+
+  Implementing blobs, trees, and commits showed me how Git structures and links files and directories over time.
+
+- Transfer Protocols:
+
+  The cloning feature required me to understand how Git communicates with remote repositories, fetches data, and constructs a local copy of the repository.
+
+## Next Steps
+
+This project is a foundation for a larger Git implementation. Future additions could include:
+
+- Branching and Merging:
+
+  Supporting `git branch`, `git merge`, and related commands to manage different development branches.
+
+- Advanced Protocol Handling:
+
+  Improving the clone process to handle different protocols (HTTP, SSH) and more advanced features of Git’s transport system.
+
+## Acknowledgments
+
+This project was inspired by the [Build Your Own Git](https://app.codecrafters.io/courses/git) Challenge, where I undertook the task of creating a Git implementation. This implementation is customized and built entirely from the ground up.
